@@ -3,34 +3,42 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.demo.tlias.mapper.EmpMapper">
+    <!--
+        用 <set> 而不是手写 set + 每个 <if> 带尾逗号：
+        原写法只要最后一个条件不成立（例如 updateTime 为 null），语句就会以
+        `dept_id=#{deptId},` 结尾直接接 where，产生 SQL 语法错误。
+        <set> 会自动去掉末尾多余的逗号，且所有条件都不成立时不会生成空 set。
+        同时修正了 name 分支里误写成 username!='' 的判断条件。
+    -->
     <update id="update">
         update emp
-        set
-        <if test="username !=null and username!=''">
-            username=#{username},
-        </if>
-        <if test="name !=null and username!=''">
-            name=#{name},
-        </if>
-        <if test="gender !=null">
-            gender=#{gender},
-        </if>
-        <if test="image !=null and image!=''">
-            image=#{image},
-        </if>
-        <if test="job  !=null">
-            job=#{job},
-        </if>
-        <if test="entrydate !=null ">
-            entrydate=#{entrydate},
-        </if>
-        <if test="deptId !=null ">
-            dept_id=#{deptId},
-        </if>
-        <if test="updateTime !=null ">
-            update_time=#{updateTime}
-        </if>
-        where id=#{id}
+        <set>
+            <if test="username != null and username != ''">
+                username = #{username},
+            </if>
+            <if test="name != null and name != ''">
+                name = #{name},
+            </if>
+            <if test="gender != null">
+                gender = #{gender},
+            </if>
+            <if test="image != null and image != ''">
+                image = #{image},
+            </if>
+            <if test="job != null">
+                job = #{job},
+            </if>
+            <if test="entrydate != null">
+                entrydate = #{entrydate},
+            </if>
+            <if test="deptId != null">
+                dept_id = #{deptId},
+            </if>
+            <if test="updateTime != null">
+                update_time = #{updateTime},
+            </if>
+        </set>
+        where id = #{id}
     </update>
     <delete id="delete">
         delete from emp where id in

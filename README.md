@@ -153,14 +153,25 @@ curl -X POST http://localhost:8080/login \
 
 ## 已知问题
 
-1. **编译阻塞：缺少私有依赖**：`pom.xml` 依赖 `com.example:itheima-utils:0.0.1-SNAPSHOT`，该构件不在任何公共仓库；`TliasApplication` 的 `@EnableHeaderConfig` 也从该包导入，`config/HeaderConfig.java` 只是同名空类占位。没有这个 jar，`mvn compile` 直接失败。
-2. **硬编码阿里云 AK/SK**：`src/main/resources/application.yml` 中明文写着 `aliyun.oss.accessKeyId` / `accessKeySecret` 与真实 bucket 名，凭据已随仓库公开，应在控制台轮换。
-3. **数据库口令硬编码**：`spring.datasource.username/password` 为 `root` + 弱口令。
-4. **JWT 密钥硬编码且过期时间写死**：`JwtUtils` 里 `signKey` 是一个写死的短英文单词常量，`genJwt` 中过期时间写死 `System.currentTimeMillis() + 3600 * 1000`（1 小时），而字段 `expire = 43200000L`（12 小时）定义了却没使用，两者不一致。
-5. **员工操作日志功能未实现**：`aop/logAspect.java` 是 **0 行的空文件**，`@Log` 注解已标在 `EmpController.delete` 上但没有任何切面处理，`operate_log` 表永远不会被写入。
-6. **`EmpMapper.xml` 的动态更新有 SQL 隐患**：`<if>` 条件里出现 `test="name !=null and username!=''"`（判断 `name` 却校验 `username`）；除 `update_time` 外每个字段后面都跟了逗号，若 `updateTime` 为空而其它字段有值，拼出的 SQL 会以 `, where id=?` 结尾导致语法错误。
-7. **无参数校验**：登录、新增员工等接口直接接收实体，没有 `@Valid`/`@NotBlank`，空值会直接进 SQL。
-8. **缺少 SQL 脚本**：4 张表无建表语句、无初始化数据，`dept_log`、`operate_log` 的结构只能从实体推测。
-9. **学习痕迹与残留文件**：`src/main/resources/1.xml`（dom4j 样例）、`static/upload.html`（上传测试页）、`test/.../Demo.java`（dom4j 练习）、`filter/DemoFilter.java`（`@WebFilter` 被注释的示例）都属于课程练习残留；`filter/LoginCheckFilter` 与 `interceptor/LoginCheckInterceptor` 两份逻辑重复，只有拦截器生效（过滤器上的 `@WebFilter` 已注释）。
-10. **无 README、无接口文档、无测试**：原仓库没有任何说明文档，也没有 Swagger 依赖；`TliasApplicationTests` 只是空的上下文加载测试。
-11. **日志配置不安全**：`logging.level.springframework.jdbc: DEBUG/TRACE` 会把 SQL 与参数打到控制台，生产环境需关掉。
+> 保留历史问题原文；已修掉的条目在末尾标 **（已修复）** 并说明新做法，未标记的仍然存在。汇总见文末「修复记录」。
+
+1. **编译阻塞：缺少私有依赖**：`pom.xml` 依赖 `com.example:itheima-utils:0.0.1-SNAPSHOT`，该构件不在任何公共仓库；`TliasApplication` 的 `@EnableHeaderConfig` 也从该包导入，`config/HeaderConfig.java` 只是同名空类占位。没有这个 jar，`mvn compile` 直接失败。（未修复）
+2. **硬编码阿里云 AK/SK**：`src/main/resources/application.yml` 中明文写着 `aliyun.oss.accessKeyId` / `accessKeySecret` 与真实 bucket 名，凭据已随仓库公开，应在控制台轮换。（未修复）
+3. **数据库口令硬编码**：`spring.datasource.username/password` 为 `root` + 弱口令。（未修复）
+4. **JWT 密钥硬编码且过期时间写死**：`JwtUtils` 里 `signKey` 是一个写死的短英文单词常量，`genJwt` 中过期时间写死 `System.currentTimeMillis() + 3600 * 1000`（1 小时），而字段 `expire = 43200000L`（12 小时）定义了却没使用，两者不一致。（未修复）
+5. **员工操作日志功能未实现**：`aop/logAspect.java` 是 **0 行的空文件**，`@Log` 注解已标在 `EmpController.delete` 上但没有任何切面处理，`operate_log` 表永远不会被写入。（未修复）
+6. **`EmpMapper.xml` 的动态更新有 SQL 隐患**：`<if>` 条件里出现 `test="name !=null and username!=''"`（判断 `name` 却校验 `username`）；除 `update_time` 外每个字段后面都跟了逗号，若 `updateTime` 为空而其它字段有值，拼出的 SQL 会以 `, where id=?` 结尾导致语法错误。**（已修复）** `update` 语句改为用 `<set>` 包裹：`<set>` 会自动去掉末尾多余逗号，所有条件都不成立时也不会生成空 `set`；`name` 分支的笔误改为 `test="name != null and name != ''"`。`delete`、`list` 两条语句未动（`list` 本来就用 `<where>`）。
+7. **无参数校验**：登录、新增员工等接口直接接收实体，没有 `@Valid`/`@NotBlank`，空值会直接进 SQL。（未修复）
+8. **缺少 SQL 脚本**：4 张表无建表语句、无初始化数据，`dept_log`、`operate_log` 的结构只能从实体推测。（未修复）
+9. **学习痕迹与残留文件**：`src/main/resources/1.xml`（dom4j 样例）、`static/upload.html`（上传测试页）、`test/.../Demo.java`（dom4j 练习）、`filter/DemoFilter.java`（`@WebFilter` 被注释的示例）都属于课程练习残留；`filter/LoginCheckFilter` 与 `interceptor/LoginCheckInterceptor` 两份逻辑重复，只有拦截器生效（过滤器上的 `@WebFilter` 已注释）。（未修复）
+10. **无 README、无接口文档、无测试**：原仓库没有任何说明文档，也没有 Swagger 依赖；`TliasApplicationTests` 只是空的上下文加载测试。（README 已补，其余未修复）
+11. **日志配置不安全**：`logging.level.springframework.jdbc: DEBUG/TRACE` 会把 SQL 与参数打到控制台，生产环境需关掉。（未修复）
+
+## 修复记录
+
+| 文件 | 修了什么 | 现在的做法 |
+| --- | --- | --- |
+| `src/main/resources/com/demo/tlias/mapper/EmpMapper.xml` | `update` 每个 `<if>` 自带尾逗号，最后一个条件不成立时拼出 `... , where id=?`，SQL 语法错误 | 整段用 `<set>` 包裹，多余逗号由 MyBatis 自动裁掉，条件全不成立时也不会出现空 `set` |
+| `src/main/resources/com/demo/tlias/mapper/EmpMapper.xml` | `test="name !=null and username!=''"` 条件笔误（判断 `name` 却校验 `username`） | 改为 `test="name != null and name != ''"` |
+| `src/main/resources/com/demo/tlias/mapper/EmpMapper.xml` | `delete` / `list` 语句 | **未改动** |
+
