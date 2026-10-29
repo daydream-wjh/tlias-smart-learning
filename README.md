@@ -82,7 +82,7 @@ tlias-smart-learning/
 | 组件 | 默认配置 | 用途 |
 | --- | --- | --- |
 | MySQL 8 | `jdbc:mysql://localhost:3306/tlias`，`root` / `root` | 业务库 |
-| 阿里云 OSS | `oss-cn-shenzhen.aliyuncs.com`，bucket `web-tlias-wjh2024` | 图片上传 |
+| 阿里云 OSS | `oss-cn-shenzhen.aliyuncs.com`，bucket 名走环境变量 | 图片上传 |
 
 ### 表结构
 
@@ -100,7 +100,7 @@ tlias-smart-learning/
 - `spring.datasource.*`：数据库连接，默认 `localhost:3306/tlias`，账号 `root` + 弱口令，需按本机修改。
 - `spring.servlet.multipart.max-file-size: 10MB`、`max-request-size: 100MB`：上传大小限制。
 - `mybatis.configuration`：开启 SQL 控制台打印与驼峰映射。
-- `aliyun.oss.*`：OSS 的 endpoint / AK / SK / bucketName，由 `AliOSSProperties`（`@ConfigurationProperties`）读取，`AliOSSUtils` 消费。
+- `aliyun.oss.*`：OSS 的 endpoint / AK / SK / bucketName，由 `AliOSSProperties`（`@ConfigurationProperties`）读取，`AliOSSUtils` 消费。**AK/SK 已改为环境变量**（`ALIYUN_OSS_AK` / `ALIYUN_OSS_SK` / `ALIYUN_OSS_BUCKET`），仓库里不再有任何真实凭据。
 - 文件末尾还有一个自定义键 `name: wjh`（作者名，代码中未见引用）。
 
 ### 建表脚本
@@ -156,8 +156,8 @@ curl -X POST http://localhost:8080/login \
 > 保留历史问题原文；已修掉的条目在末尾标 **（已修复）** 并说明新做法，未标记的仍然存在。汇总见文末「修复记录」。
 
 1. **编译阻塞：缺少私有依赖**：`pom.xml` 依赖 `com.example:itheima-utils:0.0.1-SNAPSHOT`，该构件不在任何公共仓库；`TliasApplication` 的 `@EnableHeaderConfig` 也从该包导入，`config/HeaderConfig.java` 只是同名空类占位。没有这个 jar，`mvn compile` 直接失败。（未修复）
-2. **硬编码阿里云 AK/SK**：`src/main/resources/application.yml` 中明文写着 `aliyun.oss.accessKeyId` / `accessKeySecret` 与真实 bucket 名，凭据已随仓库公开，应在控制台轮换。（未修复）
-3. **数据库口令硬编码**：`spring.datasource.username/password` 为 `root` + 弱口令。（未修复）
+2. **硬编码阿里云 AK/SK**（已修复）：原来的 `application.yml` 里明文写着真实的 `accessKeyId` / `accessKeySecret` 和 bucket 名。现已改为 `${ALIYUN_OSS_AK:...}` 形式的环境变量占位；**同时用 `git filter-branch` 把这对密钥从全部历史提交里抹掉了**，避免翻旧提交还能拿到。如果你曾经用过这对密钥，仍建议去阿里云控制台轮换一次。
+3. **数据库口令硬编码**（已修复）：改为 `${DB_USERNAME:root}` / `${DB_PASSWORD:root}`，默认值仍是本地开发的 root，但不再写死在配置里。
 4. **JWT 密钥硬编码且过期时间写死**：`JwtUtils` 里 `signKey` 是一个写死的短英文单词常量，`genJwt` 中过期时间写死 `System.currentTimeMillis() + 3600 * 1000`（1 小时），而字段 `expire = 43200000L`（12 小时）定义了却没使用，两者不一致。（未修复）
 5. **员工操作日志功能未实现**：`aop/logAspect.java` 是 **0 行的空文件**，`@Log` 注解已标在 `EmpController.delete` 上但没有任何切面处理，`operate_log` 表永远不会被写入。（未修复）
 6. **`EmpMapper.xml` 的动态更新有 SQL 隐患**：`<if>` 条件里出现 `test="name !=null and username!=''"`（判断 `name` 却校验 `username`）；除 `update_time` 外每个字段后面都跟了逗号，若 `updateTime` 为空而其它字段有值，拼出的 SQL 会以 `, where id=?` 结尾导致语法错误。**（已修复）** `update` 语句改为用 `<set>` 包裹：`<set>` 会自动去掉末尾多余逗号，所有条件都不成立时也不会生成空 `set`；`name` 分支的笔误改为 `test="name != null and name != ''"`。`delete`、`list` 两条语句未动（`list` 本来就用 `<where>`）。

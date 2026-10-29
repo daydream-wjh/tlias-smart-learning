@@ -2,8 +2,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/tlias
-    username: root
-    password: root
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
 
   servlet:
     multipart:
@@ -15,10 +15,11 @@ mybatis:
     map-underscore-to-camel-case: true
 aliyun:
   oss:
-    endpoint: https://oss-cn-shenzhen.aliyuncs.com
+    endpoint: ${ALIYUN_OSS_ENDPOINT:https://oss-cn-shenzhen.aliyuncs.com}
+    # 不要把真实的 AccessKey 写进仓库：设置环境变量 ALIYUN_OSS_AK / ALIYUN_OSS_SK 即可
     accessKeyId: ${ALIYUN_OSS_AK:请填写你的AccessKeyId}
     accessKeySecret: ${ALIYUN_OSS_SK:请填写你的AccessKeySecret}
-    bucketName: web-tlias-wjh2024
+    bucketName: ${ALIYUN_OSS_BUCKET:your-bucket-name}
 
 logging:
   level:
