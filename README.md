@@ -47,7 +47,7 @@
 单模块项目，按包分层：
 
 ```
-talis/
+tlias-smart-learning/
 ├── pom.xml
 ├── mvnw / mvnw.cmd / .mvn/          Maven Wrapper
 └── src/
